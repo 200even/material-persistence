@@ -32,7 +32,7 @@ This project does **not** infer contemporaneous ownership in the general U.S. ho
 
 Before any VHS, VCR, books, or other prevalence coding, we must establish that the complete ordered photo gallery can be recovered for each sampled sale.
 
-The first ingestion strategy uses EstateSales.NET's public legacy sale-data endpoint keyed by numeric sale ID. It records the returned `sale.pictures[]` array in source order. Browser-based gallery traversal is a later fallback, not the primary path.
+The first ingestion strategy **tests** EstateSales.NET's legacy sale-data endpoint keyed by numeric sale ID and, when available, records the returned `sale.pictures[]` array in source order. We have not yet established its completeness across the historical sample. Browser-based gallery traversal is a later fallback, not the primary path.
 
 For every sale we want an audit record containing:
 
