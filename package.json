@@ -10,6 +10,7 @@
     "test": "node --test",
     "ingest": "node src/ingest.js",
     "audit:completeness": "node src/auditCompleteness.js",
-    "gate2:blind": "node src/buildBlindManifest.js"
+    "gate2:blind": "node src/buildBlindManifest.js",
+    "gate2:reliability": "node src/reliability.js"
   }
 }
