@@ -6,9 +6,8 @@ import { PRIMITIVE_FIELDS } from '../src/deriveOpportunityV03.js';
 function syntheticRows() {
   return Array.from({ length: 15 }, (_, i) => {
     const row = { blind_id: `H-${String(i + 1).padStart(2, '0')}` };
-    for (let j = 0; j < PRIMITIVE_FIELDS.length; j++) {
-      row[PRIMITIVE_FIELDS[j]] = (i + j) % 3 === 0 ? 'YES' : 'NO';
-    }
+    const value = i % 2 === 0 ? 'YES' : 'NO';
+    for (const field of PRIMITIVE_FIELDS) row[field] = value;
     return row;
   });
 }
@@ -19,6 +18,9 @@ test('identical non-degenerate geometry ratings pass Gate 2b', () => {
   const result = calculateGate2bReliability(a, b);
   assert.equal(result.decision, 'PASS_GATE_2B');
   for (const metric of Object.values(result.primitives)) {
+    assert.equal(metric.status, 'PASS');
+  }
+  for (const metric of Object.values(result.derived)) {
     assert.equal(metric.status, 'PASS');
   }
 });
