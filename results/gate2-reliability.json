@@ -1,0 +1,39 @@
+{
+  "coverage": {
+    "n": 5,
+    "weighted_agreement": 0.8,
+    "linear_weighted_kappa": 0.21052631578947376
+  },
+  "opportunities": {
+    "vhs_opportunity": {
+      "n": 5,
+      "categories": ["NO", "YES"],
+      "raw_agreement": 0.4,
+      "cohen_kappa": -0.36363636363636376,
+      "gwet_ac1": -0.03448275862068969
+    },
+    "vcr_opportunity": {
+      "n": 5,
+      "categories": ["NO", "YES"],
+      "raw_agreement": 0.8,
+      "cohen_kappa": 0.5454545454545455,
+      "gwet_ac1": 0.6551724137931035
+    },
+    "books_opportunity": {
+      "n": 5,
+      "categories": ["NO", "YES"],
+      "raw_agreement": 0.6,
+      "cohen_kappa": -0.2500000000000007,
+      "gwet_ac1": 0.4117647058823529
+    },
+    "microwave_opportunity": {
+      "n": 5,
+      "categories": ["INDETERMINATE", "NO", "YES"],
+      "raw_agreement": 0.4,
+      "cohen_kappa": -9.251858538542973e-17,
+      "gwet_ac1": 0.17808219178082194
+    }
+  },
+  "decision": "HARD_STOP",
+  "reason": "Coverage weighted kappa is below 0.60 and opportunity metrics fail preregistered admission thresholds. Target-object coding remains locked."
+}
