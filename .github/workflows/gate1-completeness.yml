@@ -1,0 +1,63 @@
+name: gate1-completeness
+
+on:
+  pull_request:
+    paths:
+      - 'src/auditCompleteness.js'
+      - 'data/completeness-audit-sample.tsv'
+      - 'package.json'
+      - '.github/workflows/gate1-completeness.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit-completeness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run offline unit tests
+        run: npm test
+
+      - name: Run gallery completeness audit
+        run: npm run audit:completeness -- data/completeness-audit-sample.tsv out/gallery-completeness-audit.jsonl
+
+      - name: Print compact completeness summary
+        run: |
+          node --input-type=module <<'EOF'
+          import { readFile } from 'node:fs/promises';
+          const text = await readFile('out/gallery-completeness-audit.jsonl', 'utf8');
+          const rows = text.trim().split(/\n+/).filter(Boolean).map(JSON.parse);
+          console.log(`records=${rows.length} errors=${rows.filter(r => r.status !== 'ok').length}`);
+          for (const row of rows) {
+            const probeSummary = (row.image_probes ?? []).map(p => `${p.position}:${p.status}:${p.content_type}`).join(',');
+            console.log([
+              row.sample_id,
+              row.year,
+              row.sale_id,
+              row.status,
+              `endpoint=${row.endpoint_picture_count ?? '-'}`,
+              `page=${row.page_picture_key_count ?? '-'}`,
+              `class=${row.match_class ?? '-'}`,
+              `countMatch=${row.page_count_candidate_matches_endpoint ?? '-'}`,
+              `live=${row.all_sampled_images_live ?? '-'}`,
+              `evidence=${row.provisional_completeness_evidence ?? '-'}`,
+              probeSummary,
+            ].join('\t'));
+          }
+          EOF
+
+      - name: Upload completeness audit
+        uses: actions/upload-artifact@v4
+        with:
+          name: gate1-gallery-completeness-audit
+          path: out/gallery-completeness-audit.jsonl
+          if-no-files-found: error
+          retention-days: 30

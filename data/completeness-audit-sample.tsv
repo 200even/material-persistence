@@ -1,0 +1,9 @@
+sample_id	year	metro	state	sale_id	source_url
+M01	2010	Memphis	TN	135336	https://www.estatesales.net/TN/Memphis/38119/135336
+C02	2010	Houston	TX	116526	https://www.estatesales.net/TX/Houston/77058/116526
+M04	2013	Memphis	TN	453417	https://www.estatesales.net/TN/Memphis/38103/453417
+C04	2013	Chicago	IL	493533	https://www.estatesales.net/IL/Chicago/60625/493533
+M08	2019	Memphis	TN	2326491	https://www.estatesales.net/TN/Memphis/38119/2326491
+C08	2019	Seattle	WA	2167047	https://www.estatesales.net/WA/Seattle/98117/2167047
+M10	2025	Memphis	TN	4704771	https://www.estatesales.net/TN/Memphis/38112/4704771
+C10	2025	Seattle	WA	4636971	https://www.estatesales.net/WA/Seattle/98112/4636971
