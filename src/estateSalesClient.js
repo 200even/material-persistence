@@ -5,11 +5,28 @@ export function extractSaleId(input) {
   const text = String(input ?? '').trim();
   if (/^\d+$/.test(text)) return text;
 
-  const match = text.match(/\/(\d+)\/?(?:[?#].*)?$/);
-  if (!match) {
+  let url;
+  try {
+    url = new URL(text);
+  } catch {
     throw new Error(`Could not extract numeric sale ID from: ${input}`);
   }
-  return match[1];
+
+  const segments = url.pathname.split('/').filter(Boolean);
+  const [state, city, zip, saleId, ...extra] = segments;
+
+  const isListingPath =
+    extra.length === 0 &&
+    /^[A-Z]{2}$/i.test(state ?? '') &&
+    Boolean(city) &&
+    /^\d{5}$/.test(zip ?? '') &&
+    /^\d+$/.test(saleId ?? '');
+
+  if (!isListingPath) {
+    throw new Error(`Could not extract numeric sale ID from: ${input}`);
+  }
+
+  return saleId;
 }
 
 export function normalizePictureUrls(pictures = []) {
