@@ -1,56 +1,60 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { deriveCoverage, deriveOpportunity } from '../src/deriveOpportunityV03.js';
+import { deriveOpportunity } from '../src/deriveOpportunityV03.js';
 
-function row(overrides = {}) {
+function base(overrides = {}) {
   return {
     blind_id: 'H-TEST',
-    living_context: 'NO',
-    kitchen_context: 'NO',
-    dining_context: 'NO',
-    bedroom_context: 'NO',
-    office_context: 'NO',
-    storage_context: 'NO',
-    principal_shelving_run_full: 'NO',
-    equipment_run_full: 'NO',
-    secondary_storage_run_full: 'NO',
-    kitchen_counter_75: 'NO',
-    kitchen_appliance_wall_full: 'NO',
+    common_room_envelope_complete: 'NO',
+    kitchen_envelope_complete: 'NO',
+    dining_envelope_complete: 'NO',
+    bedroom_envelope_complete: 'NO',
+    office_envelope_complete: 'NO',
+    secondary_storage_envelope_complete: 'NO',
+    common_room_storage_exposure_complete: 'NO',
+    secondary_storage_exposure_complete: 'NO',
+    common_room_low_surface_exposure_complete: 'NO',
+    kitchen_work_surfaces_complete: 'NO',
     ...overrides,
   };
 }
 
-test('coverage is derived mechanically from zone count and core zones', () => {
-  assert.equal(deriveCoverage(row()), 'C0');
-  assert.equal(deriveCoverage(row({ living_context: 'YES' })), 'C1');
-  assert.equal(deriveCoverage(row({ living_context: 'YES', dining_context: 'YES' })), 'C2');
-  assert.equal(deriveCoverage(row({ living_context: 'YES', kitchen_context: 'YES', dining_context: 'YES', bedroom_context: 'YES', office_context: 'YES' })), 'C3');
-  assert.equal(deriveCoverage(row({ living_context: 'YES', dining_context: 'YES', bedroom_context: 'YES', office_context: 'YES', storage_context: 'YES' })), 'C2');
-});
-
-test('target opportunities are deterministic functions of geometry primitives', () => {
-  const result = deriveOpportunity(row({
-    living_context: 'YES',
-    office_context: 'YES',
-    principal_shelving_run_full: 'YES',
-    equipment_run_full: 'NO',
-    secondary_storage_run_full: 'NO',
-    kitchen_context: 'YES',
-    kitchen_counter_75: 'YES',
-    kitchen_appliance_wall_full: 'YES',
+test('derives opportunities only from geometry paths', () => {
+  const result = deriveOpportunity(base({
+    common_room_envelope_complete: 'YES',
+    common_room_storage_exposure_complete: 'YES',
+    common_room_low_surface_exposure_complete: 'YES',
+    dining_envelope_complete: 'YES',
+    kitchen_envelope_complete: 'YES',
+    kitchen_work_surfaces_complete: 'YES',
   }));
   assert.equal(result.vhs_opportunity, 'YES');
-  assert.equal(result.vcr_opportunity, 'NO');
+  assert.equal(result.vcr_opportunity, 'YES');
   assert.equal(result.books_opportunity, 'YES');
   assert.equal(result.microwave_opportunity, 'YES');
 });
 
-test('a TV-equipment surface can create VCR but not VHS opportunity', () => {
-  const result = deriveOpportunity(row({ equipment_run_full: 'YES' }));
-  assert.equal(result.vcr_opportunity, 'YES');
+test('propagates indeterminate when a possible route cannot be resolved', () => {
+  const result = deriveOpportunity(base({
+    common_room_envelope_complete: 'YES',
+    common_room_storage_exposure_complete: 'INDETERMINATE',
+  }));
+  assert.equal(result.vhs_opportunity, 'INDETERMINATE');
+});
+
+test('book opportunity depends on room envelopes, not storage furniture', () => {
+  const result = deriveOpportunity(base({
+    common_room_envelope_complete: 'YES',
+    office_envelope_complete: 'YES',
+    common_room_storage_exposure_complete: 'NO',
+  }));
+  assert.equal(result.books_opportunity, 'YES');
   assert.equal(result.vhs_opportunity, 'NO');
 });
 
 test('invalid primitive categories fail loudly', () => {
-  assert.throws(() => deriveOpportunity(row({ kitchen_context: 'INDETERMINATE' })), /must be YES or NO/);
+  assert.throws(
+    () => deriveOpportunity(base({ kitchen_envelope_complete: 'MAYBE' })),
+    /must be YES, NO, or INDETERMINATE/,
+  );
 });

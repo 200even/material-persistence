@@ -1,0 +1,63 @@
+name: gate2b-geometry
+
+on:
+  pull_request:
+    paths:
+      - 'docs/protocol-v0.3.md'
+      - 'data/gate2b-validation.tsv'
+      - 'src/deriveOpportunityV03.js'
+      - 'src/buildGate2bPacket.js'
+      - 'src/gate2bReliability.js'
+      - 'scripts/render_blind_sheets.py'
+      - '.github/workflows/gate2b-geometry.yml'
+      - 'package.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-geometry-packet:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Test
+        run: npm test
+      - name: Rebuild Gate 1 manifest
+        run: npm run ingest -- data/calibration-sample.tsv out/calibration-ingest.jsonl
+      - name: Build original opaque manifest
+        run: npm run gate2:blind -- out/calibration-ingest.jsonl out/gate2
+      - name: Build frozen 15-household geometry packet
+        run: npm run gate2b:packet -- out/gate2/private/render-manifest.jsonl data/gate2b-validation.tsv out/gate2b
+      - name: Verify target and source leakage is absent
+        run: |
+          if grep -R -E -i 'estatesales\.net|Memphis|Houston|Chicago|Atlanta|Denver|Seattle|Phoenix|2010|2013|2016|2019|2022|2025|sale_id|source_url|VHS|VCR|books|microwave' out/gate2b/coding-packet; then
+            echo 'Blinding or target leak detected in Gate 2b coding packet' >&2
+            exit 1
+          fi
+      - name: Install Pillow
+        run: python -m pip install --disable-pip-version-check pillow==11.3.0
+      - name: Render blinded contact sheets
+        run: python scripts/render_blind_sheets.py out/gate2b/private/render-manifest.jsonl out/gate2b/coding-packet
+      - name: Require complete image rendering
+        run: |
+          python - <<'PY'
+          import json
+          s=json.load(open('out/gate2b/coding-packet/render-summary.json'))
+          print(s)
+          if s['households'] != 15:
+              raise SystemExit(f"Expected 15 households, got {s['households']}")
+          if s['download_failures'] != 0:
+              raise SystemExit(f"Image download failures: {s['download_failures']}")
+          PY
+      - name: Upload target-neutral geometry packet only
+        uses: actions/upload-artifact@v4
+        with:
+          name: gate2b-geometry-packet
+          path: out/gate2b/coding-packet
+          if-no-files-found: error
+          retention-days: 30

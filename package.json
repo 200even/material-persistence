@@ -11,6 +11,8 @@
     "ingest": "node src/ingest.js",
     "audit:completeness": "node src/auditCompleteness.js",
     "gate2:blind": "node src/buildBlindManifest.js",
-    "gate2:reliability": "node src/reliability.js"
+    "gate2:reliability": "node src/reliability.js",
+    "gate2b:packet": "node src/buildGate2bPacket.js",
+    "gate2b:reliability": "node src/gate2bReliability.js"
   }
 }

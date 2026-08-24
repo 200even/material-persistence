@@ -1,80 +1,97 @@
 const YES = 'YES';
 const NO = 'NO';
+const INDETERMINATE = 'INDETERMINATE';
 
-const ZONE_FIELDS = [
-  'living_context',
-  'kitchen_context',
-  'dining_context',
-  'bedroom_context',
-  'office_context',
-  'storage_context',
+export const PRIMITIVE_FIELDS = [
+  'common_room_envelope_complete',
+  'kitchen_envelope_complete',
+  'dining_envelope_complete',
+  'bedroom_envelope_complete',
+  'office_envelope_complete',
+  'secondary_storage_envelope_complete',
+  'common_room_storage_exposure_complete',
+  'secondary_storage_exposure_complete',
+  'common_room_low_surface_exposure_complete',
+  'kitchen_work_surfaces_complete',
 ];
 
-function requireBinary(row, fields) {
+const ROOM_FIELDS = [
+  'common_room_envelope_complete',
+  'kitchen_envelope_complete',
+  'dining_envelope_complete',
+  'bedroom_envelope_complete',
+  'office_envelope_complete',
+  'secondary_storage_envelope_complete',
+];
+
+const VALUES = new Set([YES, NO, INDETERMINATE]);
+
+function requireValues(row, fields = PRIMITIVE_FIELDS) {
   for (const field of fields) {
-    if (![YES, NO].includes(row[field])) {
-      throw new Error(`${row.blind_id ?? 'row'}: ${field} must be YES or NO`);
+    if (!VALUES.has(row[field])) {
+      throw new Error(`${row.blind_id ?? 'row'}: ${field} must be YES, NO, or INDETERMINATE`);
     }
   }
 }
 
-export function deriveCoverage(row) {
-  requireBinary(row, ZONE_FIELDS);
-  const z = ZONE_FIELDS.filter(f => row[f] === YES).length;
-  if (z === 0) return 'C0';
-  if (z === 1) return 'C1';
-  if (z <= 4) return 'C2';
-  const core = ['living_context', 'kitchen_context', 'bedroom_context'];
-  return core.every(f => row[f] === YES) ? 'C3' : 'C2';
+function and2(a, b) {
+  if (a === NO || b === NO) return NO;
+  if (a === YES && b === YES) return YES;
+  return INDETERMINATE;
+}
+
+function orValues(values) {
+  if (values.includes(YES)) return YES;
+  if (values.every(v => v === NO)) return NO;
+  return INDETERMINATE;
+}
+
+function atLeastTwo(values) {
+  const yes = values.filter(v => v === YES).length;
+  const indeterminate = values.filter(v => v === INDETERMINATE).length;
+  if (yes >= 2) return YES;
+  if (yes + indeterminate < 2) return NO;
+  return INDETERMINATE;
 }
 
 export function deriveOpportunity(row) {
-  const primitiveFields = [
-    ...ZONE_FIELDS,
-    'principal_shelving_run_full',
-    'equipment_run_full',
-    'secondary_storage_run_full',
-    'kitchen_counter_75',
-    'kitchen_appliance_wall_full',
-  ];
-  requireBinary(row, primitiveFields);
+  requireValues(row);
 
-  const coverage_class = deriveCoverage(row);
-  const principalLivingYes = [
-    'living_context',
-    'dining_context',
-    'bedroom_context',
-    'office_context',
-  ].filter(f => row[f] === YES).length;
+  const vhs_common = and2(
+    row.common_room_envelope_complete,
+    row.common_room_storage_exposure_complete,
+  );
+  const vhs_secondary = and2(
+    row.secondary_storage_envelope_complete,
+    row.secondary_storage_exposure_complete,
+  );
 
-  const two_principal_living_zones_context = principalLivingYes >= 2 ? YES : NO;
-  const living_plus_office_context =
-    row.living_context === YES && row.office_context === YES ? YES : NO;
+  const vcr_common = and2(
+    row.common_room_envelope_complete,
+    row.common_room_low_surface_exposure_complete,
+  );
+  const vcr_secondary = and2(
+    row.secondary_storage_envelope_complete,
+    row.secondary_storage_exposure_complete,
+  );
 
-  const vhs_opportunity =
-    row.principal_shelving_run_full === YES || row.secondary_storage_run_full === YES ? YES : NO;
+  const books_opportunity = atLeastTwo([
+    row.common_room_envelope_complete,
+    row.dining_envelope_complete,
+    row.bedroom_envelope_complete,
+    row.office_envelope_complete,
+  ]);
 
-  const vcr_opportunity =
-    row.equipment_run_full === YES || row.secondary_storage_run_full === YES ? YES : NO;
-
-  const books_opportunity =
-    row.principal_shelving_run_full === YES ||
-    two_principal_living_zones_context === YES ||
-    living_plus_office_context === YES ||
-    coverage_class === 'C3'
-      ? YES
-      : NO;
-
-  const microwave_opportunity =
-    row.kitchen_counter_75 === YES && row.kitchen_appliance_wall_full === YES ? YES : NO;
+  const microwave_opportunity = and2(
+    row.kitchen_envelope_complete,
+    row.kitchen_work_surfaces_complete,
+  );
 
   return {
     blind_id: row.blind_id,
-    coverage_class,
-    two_principal_living_zones_context,
-    living_plus_office_context,
-    vhs_opportunity,
-    vcr_opportunity,
+    room_envelopes_yes: ROOM_FIELDS.filter(field => row[field] === YES).length,
+    vhs_opportunity: orValues([vhs_common, vhs_secondary]),
+    vcr_opportunity: orValues([vcr_common, vcr_secondary]),
     books_opportunity,
     microwave_opportunity,
   };
